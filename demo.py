@@ -1,7 +1,13 @@
-import numpy as np
+import os
+import logging
 
+import numpy as np
+import svgwrite
+
+import drawing
 import lyrics
-from hand import Hand
+from rnn import rnn
+
 
 if __name__ == '__main__':
     hand = Hand()
