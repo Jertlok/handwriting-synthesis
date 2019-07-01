@@ -1,4 +1,4 @@
-from demo import Hand
+from hand import Hand
 import random
 import argparse
 
