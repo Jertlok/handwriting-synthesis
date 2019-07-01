@@ -9,6 +9,8 @@ Via CLI
 python3 run.py --text "Phrase to be handwritten"
 python3 run.py --infile input.txt --outfile output.svg --color black --bgcolor "#FFFFFF" --style 5 --width 1 --bias 0.5
 ```
+If you would like to use the --pngconvert function and you are on Windows, you will have to install the GTK3 runtime dependencies.
+You can find them here: https://github.com/tschoonj/GTK-for-Windows-Runtime-Environment-Installer/releases
 
 Via script
 ```python

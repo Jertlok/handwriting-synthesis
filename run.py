@@ -60,15 +60,18 @@ class HandwriteCLI():
         parser.add_argument('--silent', default=False, action='store_true', \
             help='Suppress output to terminal. Defaults to false.')
 
+        parser.add_argument('--pngconvert', default=False, action='store_true', \
+            help='Convert to PNG after SVG creation')
+
         args = parser.parse_args()
         return args
 
     def get_input_lines(self, ):
         if self.args.infile is not None:
-            lines = open(self.args.infile, 'r').readlines()
+            lines = open(self.args.infile, encoding='utf-8', mode='r').readlines()
             lines = list(map(str.rstrip, lines))
         else:
-            lines = self.args.text.splitlines()
+            lines = self.args.text.split()
         return lines
 
     def handwrite(self, lines):
@@ -81,6 +84,11 @@ class HandwriteCLI():
         stroke_colors = [self.args.color] * length
         stroke_widths = [self.args.width] * length
 
+        if self.args.pngconvert:
+            png_convert = True
+        else:
+            png_convert = False
+
         # Write note
         hand = Hand()
         hand.write(
@@ -90,7 +98,8 @@ class HandwriteCLI():
             styles=styles,
             stroke_colors=stroke_colors,
             stroke_widths=stroke_widths,
-            background_color=self.args.bgcolor
+            background_color=self.args.bgcolor,
+            png_convert=png_convert
         )
 
     def print_report(self):

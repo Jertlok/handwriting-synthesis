@@ -3,6 +3,7 @@ import os
 
 import numpy as np
 import svgwrite
+from cairosvg import svg2png
 
 import drawing
 from rnn import rnn
@@ -11,7 +12,7 @@ from rnn import rnn
 class Hand(object):
 
     def __init__(self):
-        os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+        os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
         self.nn = rnn(
             log_dir='logs',
             checkpoint_dir='checkpoints',
@@ -38,7 +39,8 @@ class Hand(object):
         self.nn.restore()
 
     def write(self, filename, lines, biases=None, styles=None, \
-              stroke_colors=None, stroke_widths=None, background_color='white'):
+              stroke_colors=None, stroke_widths=None, background_color='white', \
+              png_convert=False):
         valid_char_set = set(drawing.alphabet)
         for line_num, line in enumerate(lines):
             if len(line) > 75:
@@ -60,7 +62,8 @@ class Hand(object):
 
         strokes = self._sample(lines, biases=biases, styles=styles)
         self._draw(strokes, lines, filename, stroke_colors=stroke_colors, \
-                   stroke_widths=stroke_widths, background_color=background_color)
+                   stroke_widths=stroke_widths, background_color=background_color, \
+                   png_convert=png_convert)
 
     def _sample(self, lines, biases=None, styles=None):
         num_samples = len(lines)
@@ -109,25 +112,32 @@ class Hand(object):
         return samples
 
     def _draw(self, strokes, lines, filename, stroke_colors=None, \
-              stroke_widths=None, background_color='white'):
+              stroke_widths=None, background_color='white', \
+              png_convert=False):
         stroke_colors = stroke_colors or ['black']*len(lines)
         stroke_widths = stroke_widths or [2]*len(lines)
 
-        line_height = 60
-        view_width = 1000
-        view_height = line_height*(len(strokes) + 1)
+        line_height = 8
+        view_height = 64
 
-        dwg = svgwrite.Drawing(filename=filename)
-        dwg.viewbox(width=view_width, height=view_height)
-        dwg.add(dwg.rect(insert=(0, 0), size=(view_width, view_height), fill=background_color))
-
-        initial_coord = np.array([0, -(3*line_height / 4)])
         for offsets, line, color, width in zip(strokes, lines, stroke_colors, stroke_widths):
+            # Dynamic width - consider at least 24px for each character
+            view_width = len(line)*24
+            # Minimum width is 192px
+            if(view_width < 192):
+                view_width = 192
+            # Create a file for each "line"
+            dwg = svgwrite.Drawing(filename='./out/svg/%s.svg' % line)
+            dwg.viewbox(width=view_width, height=view_height)
+            dwg.add(dwg.rect(insert=(0, 0), size=(view_width, view_height), fill=background_color))
+            # Initial coordinates for the line height
+            initial_coord = np.array([0, -(3*line_height / 4)])
 
             if not line:
                 initial_coord[1] -= line_height
                 continue
 
+            print('Processing %s' % line)
             offsets[:, :2] *= 1.5
             strokes = drawing.offsets_to_coords(offsets)
             strokes = drawing.denoise(strokes)
@@ -148,4 +158,15 @@ class Hand(object):
 
             initial_coord[1] -= line_height
 
-        dwg.save()
+            # Save the svg
+            dwg.save()
+
+            # If PNGs are needed convert them
+            if(png_convert):
+                svg2png(open('./out/svg/%s.svg' % line, 'rb').read(), \
+                    write_to=open('./out/png/%s.png' % line, 'wb'))
+
+        # Finally create a file containing the dataset information
+        with open('./out/dataset.txt', 'w') as f:
+            for item in lines:
+                f.write('./micra_dataset/%s.png %s\n' % (item, item))
